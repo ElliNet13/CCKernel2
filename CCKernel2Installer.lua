@@ -69,13 +69,66 @@ Credits:
 
 local LibDeflate
 
+local rebootos = os.reboot
+
+-- Get the full path of the running program
+local runningProgram = shell.getRunningProgram()
+
+-- Extract the folder from the path
+local folderPath = runningProgram:match("(.*/)")
+if not folderPath then
+  folderPath = "" -- if no folder, it means script is in root folder
+end
+
+-- I could have done this better
+function os.reboot()
+	-- Change the bin
+	fs.delete("/usr/bin")
+	fs.makeDir("/usr/bin")
+	local sourcePath = folderPath .. "/bin"
+	for _, file in ipairs(fs.list(sourcePath)) do
+		fs.copy(sourcePath .. "/" .. file, "/usr/bin/" .. file)
+	end
+
+	-- Copy lib to /usr/lib
+	fs.copy(folderPath .. "/fakeShellLib.lua", "/usr/lib/fakeShellLib.lua")
+	
+	-- Read original lib
+	local f = fs.open(folderPath .. "/fakeShellLib.lua", "r")
+	local shellcontent = f.readAll()
+	f.close()
+	
+	-- Add return statement
+	shellcontent2 = shellcontent .. "\nreturn shell"
+	
+	-- Write new shell lib to /usr/bin
+	local f = fs.open("/usr/bin/fakeShellLib.lua", "w")
+	f.write(shellcontent2)
+	f.close()
+	
+	-- Delete old init
+	fs.delete("/usr/bin/init.lua")
+	
+	-- Read new init content
+	local f = fs.open(folderPath .. "/init.lua", "r")
+	local initcontent = f.readAll()
+	f.close()
+	
+	-- Combine and write new init
+	local f = fs.open("/usr/bin/init.lua", "w")
+	f.write(shellcontent .. "\n" .. initcontent)
+	f.close()
+
+	rebootos()
+end
+
 do
 	-- Semantic version. all lowercase.
 	-- Suffix can be alpha1, alpha2, beta1, beta2, rc1, rc2, etc.
 	-- NOTE: Two version numbers needs to modify.
 	-- 1. On the top of LibDeflate.lua
 	-- 2. HERE
-	local _VERSION = "1.0.0-release"
+	local _VERSION = "1.0.1-release"
 
 	local _COPYRIGHT =
 	"LibDeflate ".._VERSION
@@ -4274,6 +4327,7 @@ if ... == "--quiet" and fs.exists("unattended.ltn") then
 		file.writeLine("os.shutdown()")
 		file.close()
 	end
+
 	os.reboot()
 	return
 else

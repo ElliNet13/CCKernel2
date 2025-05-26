@@ -1,3 +1,7 @@
+if kernel == nil then error("This requires CCKernel2.") end
+
+local shell = dofile("/usr/bin/fakeShellLib.lua")
+
 -- This file must be setuid + owner = 0
 term.clear()
 term.setCursorPos(1, 1)
@@ -14,12 +18,8 @@ while true do
     if not users.checkPassword(uid, password) then print("Login incorrect\n") else
         kernel.setProcessProperty(_PID, "loggedin", true)
         users.setuid(uid)
-        local oldDir = shell.dir()
-        shell.setDir("~")
-        shell.run("shell")
-        shell.setDir(oldDir)
+        shell.run("/usr/bin/shell.lua")
         kernel.setProcessProperty(_PID, "loggedin", false)
-        term.clear()
         term.setCursorPos(1, 1)
         local ptab = kernel.getProcesses()
         local loggedin = false
